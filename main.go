@@ -71,6 +71,9 @@ type ConfigElastic struct {
 
 func (cfg *ConfigElastic) getConfig() *elasticsearch.Config {
 	debugLogger.Debug("reading Elatic search config")
+	if cfg.Password == "" {
+		debugLogger.Debug("Password empty?")
+	}
 	config := &elasticsearch.Config{
 		Addresses:         cfg.Addresses,
 		Username:          cfg.Username,
@@ -103,7 +106,6 @@ func ConfigRead(configFileName string, configOutput *ConfigType) *viper.Viper {
 	configReader.SetDefault("prometheus.endpoint", "/metrics")
 	configReader.SetDefault("elastic.addresses", []string{"http://localhost:9200"})
 	configReader.SetDefault("elastic.username", "github-hook")
-	configReader.SetDefault("elastic.password", "")
 	configReader.SetDefault("elastic.enableMetrics", true)
 	configReader.SetDefault("elastic.enableDebugLogging", true)
 	configReader.SetDefault("elastic.index", "application-github-webhook-test")
@@ -152,6 +154,10 @@ func main() {
 	flag.Parse()
 	config = new(ConfigType)
 	ConfigRead(configFileName, config)
+	envPassword := os.Getenv(BaseENVname + "_ELASTIC_PASSWORD")
+	if envPassword != "" {
+		config.Elastic.Password = envPassword
+	}
 	setupLogging(config.Logging)
 	esClient, err = elasticsearch.NewClient(*config.Elastic.getConfig())
 	if err != nil {
@@ -181,7 +187,12 @@ func main() {
 		if res.StatusCode == http.StatusOK {
 			logger.Info("Indice already exists")
 		} else {
-			logger.Error("Unknown response", "response", res)
+			if res.StatusCode == http.StatusUnauthorized {
+				logger.Error("Elastic Connection Unauthorized", "response", res)
+				os.Exit(-1)
+			} else {
+				logger.Error("Unknown response", "response", res)
+			}
 		}
 	}
 	hook := &Webhook{secret: config.Github.Secret}
