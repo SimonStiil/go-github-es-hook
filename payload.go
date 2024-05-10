@@ -32,30 +32,22 @@ type Webhook struct {
 	secret string
 }
 
-func (hook *Webhook) Parse(r *http.Request) (*PullRequest, error) {
+func (hook *Webhook) Parse(r *http.Request) (*PullRequest, []byte, error) {
 	defer func() {
 		_, _ = io.Copy(io.Discard, r.Body)
 		_ = r.Body.Close()
 	}()
 	if r.Method != http.MethodPost {
-		return nil, ErrInvalidHTTPMethod
-	}
-	event := r.Header.Get("X-GitHub-Event")
-	if event == "" {
-		return nil, ErrMissingGithubEventHeader
-	}
-	gitHubEvent := Event(event)
-	if gitHubEvent != PullRequestEvent {
-		return nil, ErrEventNotFound
+		return nil, nil, ErrInvalidHTTPMethod
 	}
 	payload, err := io.ReadAll(r.Body)
 	if err != nil || len(payload) == 0 {
-		return nil, ErrParsingPayload
+		return nil, nil, ErrParsingPayload
 	}
 	if len(hook.secret) > 0 {
 		signature := r.Header.Get("X-Hub-Signature-256")
 		if len(signature) == 0 {
-			return nil, ErrMissingHubSignatureHeader
+			return nil, payload, ErrMissingHubSignatureHeader
 		}
 
 		signature = strings.TrimPrefix(signature, "sha256=")
@@ -65,16 +57,24 @@ func (hook *Webhook) Parse(r *http.Request) (*PullRequest, error) {
 		expectedMAC := hex.EncodeToString(mac.Sum(nil))
 
 		if !hmac.Equal([]byte(signature), []byte(expectedMAC)) {
-			return nil, ErrHMACVerificationFailed
+			return nil, payload, ErrHMACVerificationFailed
 		}
+	}
+	event := r.Header.Get("X-GitHub-Event")
+	if event == "" {
+		return nil, payload, ErrMissingGithubEventHeader
+	}
+	gitHubEvent := Event(event)
+	if gitHubEvent != PullRequestEvent {
+		return nil, payload, ErrEventNotFound
 	}
 	switch gitHubEvent {
 	case PullRequestEvent:
 		pl := new(PullRequest)
-		err = json.Unmarshal([]byte(payload), pl)
-		return pl, err
+		err = json.Unmarshal(payload, pl)
+		return pl, payload, err
 	default:
-		return nil, ErrEventNotSpecifiedToParse
+		return nil, payload, ErrEventNotSpecifiedToParse
 	}
 }
 

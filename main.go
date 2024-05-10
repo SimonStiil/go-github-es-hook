@@ -201,11 +201,26 @@ func main() {
 	}
 	http.HandleFunc(config.Github.Endpoint, func(w http.ResponseWriter, r *http.Request) {
 		gitEvent := r.Header.Get("X-GitHub-Event")
-		payload, err := hook.Parse(r)
+		payload, bodyBytes, err := hook.Parse(r)
 		if err != nil {
 			if err == ErrEventNotFound || err == ErrEventNotSpecifiedToParse {
+				if err == ErrEventNotFound && gitEvent == "ping" {
+					var e map[string]interface{}
+					err = json.Unmarshal(bodyBytes, &e)
+					if err != nil {
+						logger.Error("error unmarshaling body", "body", string(bodyBytes), "error", err)
+					}
+					logger.Info("ping event", "repository", e["repository"].(map[string]interface{})["full_name"], "type", e["hook"].(map[string]interface{})["type"], "id", e["hook"].(map[string]interface{})["id"])
+					event.WithLabelValues(gitEvent, "OK").Inc()
+					w.WriteHeader(http.StatusOK)
+					w.Write([]byte("pong"))
+					return
+				}
 				debugLogger.Debug("unwanted github event", "event", gitEvent, "error", err)
 				event.WithLabelValues(gitEvent, "Skipped").Inc()
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte("skipped"))
+				return
 			} else {
 				logger.Warn("error parsing github event", "event", gitEvent, "error", err)
 				event.WithLabelValues(gitEvent, "ParseErr").Inc()
