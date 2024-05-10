@@ -145,8 +145,8 @@ type Repo struct {
 	AllowForking              bool      `json:"allow_forking"`
 	IsTemplate                bool      `json:"is_template"`
 	WebCommitSignoffRequired  bool      `json:"web_commit_signoff_required"`
-	Topics                    *string   `json:"topics"`
-	Visibility                *string   `json:"visibility"`
+	Topics                    []string  `json:"topics"`
+	Visibility                string    `json:"visibility"`
 	Forks                     int64     `json:"forks"`
 	OpenIssues                int64     `json:"open_issues"`
 	Watchers                  int64     `json:"watchers"`
