@@ -7,6 +7,9 @@
       "number": {
         "type": "long"
       },
+      "timestamp": {
+        "type": "date"
+      },
       "pull_request": {
         "type": "object",
         "properties": {

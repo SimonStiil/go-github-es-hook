@@ -165,8 +165,9 @@ type Repo struct {
 }
 
 type PullRequest struct {
-	Action      string `json:"action"`
-	Number      int64  `json:"number"`
+	Timestamp   time.Time `json:"timestamp"`
+	Action      string    `json:"action"`
+	Number      int64     `json:"number"`
 	PullRequest struct {
 		URL            string     `json:"url"`
 		ID             int64      `json:"id"`
@@ -247,5 +248,6 @@ type PullRequest struct {
 }
 
 func (pr *PullRequest) parse() ([]byte, error) {
+	pr.Timestamp = time.Now()
 	return json.Marshal(pr)
 }
