@@ -1,0 +1,4 @@
+elastic:
+  addresses: 
+    - "https://localhost:9200"
+  username: elastic

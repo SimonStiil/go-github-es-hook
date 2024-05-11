@@ -78,6 +78,8 @@ func (hook *Webhook) Parse(r *http.Request) (*PullRequest, []byte, error) {
 	}
 }
 
+//Based on https://github.com/go-playground/webhooks/blob/master/github/github.go But api is out of data.
+
 type Milestone struct {
 	URL          string    `json:"url"`
 	HTMLURL      string    `json:"html_url"`
