@@ -70,10 +70,10 @@
             "type": "date"
           },
           "closed_at": {
-            "type": "keyword"
+            "type": "date"
           },
           "merged_at": {
-            "type": "keyword"
+            "type": "date"
           },
           "merge_commit_sha": {
             "type": "keyword"

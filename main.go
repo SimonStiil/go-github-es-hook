@@ -99,7 +99,7 @@ func ConfigRead(configFileName string, configOutput *ConfigType) *viper.Viper {
 	configReader.AddConfigPath("/app/")
 	configReader.AddConfigPath(".")
 	configReader.SetEnvPrefix(BaseENVname)
-	configReader.SetDefault("logging.level", "Debug")
+	configReader.SetDefault("logging.level", "info")
 	configReader.SetDefault("logging.format", "text")
 	configReader.SetDefault("port", 8080)
 	configReader.SetDefault("prometheus.enabled", true)
