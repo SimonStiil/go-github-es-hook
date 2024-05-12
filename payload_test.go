@@ -8,6 +8,7 @@ import (
 )
 
 func Test_ParseJson(t *testing.T) {
+	setupTestlogging()
 	client := new(http.Client)
 	req, _ := http.NewRequest("GET", "https://raw.githubusercontent.com/go-playground/webhooks/master/testdata/github/pull-request.json", nil)
 	req.Header.Set("Content-Type", "application/json")
@@ -22,7 +23,7 @@ func Test_ParseJson(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	playload := new(PullRequest)
+	playload := new(PullRequestEvent)
 	err = json.Unmarshal(bodyText, playload)
 	if err != nil {
 		t.Error(err)

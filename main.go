@@ -59,6 +59,14 @@ type ConfigGithub struct {
 	Secret   string `mapstructure:"secret"`
 	Endpoint string `mapstructure:"endpoint"`
 }
+
+func (c *ConfigGithub) populateEnv() {
+	envSecret := os.Getenv(BaseENVname + "_GITHUB_SECRET")
+	if envSecret != "" {
+		c.Secret = envSecret
+	}
+}
+
 type ConfigElastic struct {
 	Addresses         []string `mapstructure:"addresses"`
 	Username          string   `mapstructure:"username"`
@@ -67,6 +75,13 @@ type ConfigElastic struct {
 	EnableMetrics     bool     `mapstructure:"enableMetrics"`
 	EnableDebugLogger bool     `mapstructure:"enableDebugLogging"`
 	Index             string   `mapstructure:"index"`
+}
+
+func (c *ConfigElastic) populateEnv() {
+	envPassword := os.Getenv(BaseENVname + "_ELASTIC_PASSWORD")
+	if envPassword != "" {
+		c.Password = envPassword
+	}
 }
 
 func (cfg *ConfigElastic) getConfig() *elasticsearch.Config {
@@ -148,17 +163,22 @@ func setupLogging(Logging ConfigLogging) {
 	slog.SetDefault(logger)
 }
 
+func setupTestlogging() {
+	loggingLevel := new(slog.LevelVar)
+	loggingLevel.Set(slog.LevelDebug)
+	logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: loggingLevel, AddSource: true}))
+	debugLogger = logger
+}
+
 func main() {
 	var err error
 	flag.StringVar(&configFileName, "config", "config", "Use a different config file name")
 	flag.Parse()
 	config = new(ConfigType)
 	ConfigRead(configFileName, config)
-	envPassword := os.Getenv(BaseENVname + "_ELASTIC_PASSWORD")
-	if envPassword != "" {
-		config.Elastic.Password = envPassword
-	}
 	setupLogging(config.Logging)
+	config.Github.populateEnv()
+	config.Elastic.populateEnv()
 	esClient, err = elasticsearch.NewClient(*config.Elastic.getConfig())
 	if err != nil {
 		logger.Error("error staring elasticsearch client", "error", err)

@@ -23,7 +23,7 @@ var (
 )
 
 const (
-	PullRequestEvent Event = "pull_request"
+	PullRequestEventString Event = "pull_request"
 )
 
 type Event string
@@ -32,7 +32,7 @@ type Webhook struct {
 	secret string
 }
 
-func (hook *Webhook) Parse(r *http.Request) (*PullRequest, []byte, error) {
+func (hook *Webhook) Parse(r *http.Request) (*PullRequestEvent, []byte, error) {
 	defer func() {
 		_, _ = io.Copy(io.Discard, r.Body)
 		_ = r.Body.Close()
@@ -65,12 +65,12 @@ func (hook *Webhook) Parse(r *http.Request) (*PullRequest, []byte, error) {
 		return nil, payload, ErrMissingGithubEventHeader
 	}
 	gitHubEvent := Event(event)
-	if gitHubEvent != PullRequestEvent {
+	if gitHubEvent != PullRequestEventString {
 		return nil, payload, ErrEventNotFound
 	}
 	switch gitHubEvent {
-	case PullRequestEvent:
-		pl := new(PullRequest)
+	case PullRequestEventString:
+		pl := new(PullRequestEvent)
 		err = json.Unmarshal(payload, pl)
 		return pl, payload, err
 	default:
@@ -109,14 +109,14 @@ type User struct {
 	SiteAdmin  bool   `json:"site_admin"`
 }
 type Reference struct {
-	Label string `json:"label"`
-	Ref   string `json:"ref"`
-	Sha   string `json:"sha"`
-	User  User   `json:"user"`
-	Repo  Repo   `json:"repo"`
+	Label string     `json:"label"`
+	Ref   string     `json:"ref"`
+	Sha   string     `json:"sha"`
+	User  User       `json:"user"`
+	Repo  Repository `json:"repo"`
 }
 
-type Repo struct {
+type Repository struct {
 	ID                        int64     `json:"id"`
 	NodeID                    string    `json:"node_id"`
 	Name                      string    `json:"name"`
@@ -166,7 +166,7 @@ type Repo struct {
 	MergeCommitTitle          string    `json:"merge_commit_title"`
 }
 
-type PullRequest struct {
+type PullRequestEvent struct {
 	Timestamp   time.Time `json:"timestamp"`
 	Action      string    `json:"action"`
 	Number      int64     `json:"number"`
@@ -221,7 +221,7 @@ type PullRequest struct {
 			From string `json:"from"`
 		} `json:"body"`
 	} `json:"changes"`
-	Repository Repo `json:"repository"`
+	Repository Repository `json:"repository"`
 	Label      struct {
 		ID          int64  `json:"id"`
 		NodeID      string `json:"node_id"`
@@ -249,7 +249,7 @@ type PullRequest struct {
 	} `json:"installation"`
 }
 
-func (pr *PullRequest) parse() ([]byte, error) {
+func (pr *PullRequestEvent) parse() ([]byte, error) {
 	pr.Timestamp = time.Now()
 	return json.Marshal(pr)
 }
