@@ -32,6 +32,19 @@ podTemplate(yaml: '''
         - sleep
         args: 
         - 99d
+        volumeMounts:
+        - name: gitconfig
+          mountPath: /root/.gitconfig
+          subPath: .gitconfig
+        env:
+        - name: https_proxy
+          value: "http://diskstation.stiil.dk:3128"
+        - name: HTTPS_PROXY
+          value: "http://diskstation.stiil.dk:3128"
+        - name: http_proxy
+          value: "http://diskstation.stiil.dk:3128"
+        - name: HTTP_PROXY
+          value: "http://diskstation.stiil.dk:3128"
       restartPolicy: Never
       volumes:
       - name: kaniko-secret
@@ -40,6 +53,9 @@ podTemplate(yaml: '''
           items:
           - key: .dockerconfigjson
             path: config.json
+      - name: gitconfig
+        configMap:
+          name: gitconfig
 ''') {
   node(POD_LABEL) {
     TreeMap scmData
@@ -62,7 +78,7 @@ podTemplate(yaml: '''
       stage('UnitTests') {
         withEnv(['CGO_ENABLED=0']) {
           sh '''
-            go test .
+            go test . -v
           '''
         }
       }
@@ -116,7 +132,6 @@ podTemplate(yaml: '''
       }
       container('manifest-tool') {
         stage('Build combined manifest') {
-          sh 'echo $HOME && pwd && whoami'
           withEnv(["GIT_COMMIT=${scmData.GIT_COMMIT}", "PACKAGE_NAME=${properties.PACKAGE_NAME}", "PACKAGE_DESTINATION=${properties.PACKAGE_DESTINATION}", "PACKAGE_CONTAINER_SOURCE=${properties.PACKAGE_CONTAINER_SOURCE}", "GIT_BRANCH=${BRANCH_NAME}"]) {
             if (isMainBranch()){
               sh 'manifest-tool push from-args --platforms linux/amd64,linux/arm64 --template $PACKAGE_DESTINATION/$PACKAGE_NAME:$BRANCH_NAME-ARCH --tags latest --target $PACKAGE_DESTINATION/$PACKAGE_NAME:$BRANCH_NAME'
