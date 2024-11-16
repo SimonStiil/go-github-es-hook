@@ -33,18 +33,10 @@ podTemplate(yaml: '''
         args: 
         - 99d
         volumeMounts:
-        - name: gitconfig
-          mountPath: /root/.gitconfig
-          subPath: .gitconfig
-        env:
-        - name: https_proxy
-          value: "http://diskstation.stiil.dk:3128"
-        - name: HTTPS_PROXY
-          value: "http://diskstation.stiil.dk:3128"
-        - name: http_proxy
-          value: "http://diskstation.stiil.dk:3128"
-        - name: HTTP_PROXY
-          value: "http://diskstation.stiil.dk:3128"
+        - name: "golang-cache"
+          mountPath: "/root/.cache/"
+        - name: "golang-prgs"
+          mountPath: "/go/pkg/"
       restartPolicy: Never
       volumes:
       - name: kaniko-secret
@@ -53,9 +45,12 @@ podTemplate(yaml: '''
           items:
           - key: .dockerconfigjson
             path: config.json
-      - name: gitconfig
-        configMap:
-          name: gitconfig
+      - name: "golang-cache"
+        persistentVolumeClaim:
+          claimName: "golang-cache"
+      - name: "golang-prgs"
+        persistentVolumeClaim:
+          claimName: "golang-prgs"
 ''') {
   node(POD_LABEL) {
     TreeMap scmData
@@ -71,7 +66,7 @@ podTemplate(yaml: '''
     container('golang') {
       stage('Get CA Certs') {
         sh '''
-          apk --update add ca-certificates 
+          apk --update add --no-check-certificate ca-certificates git
           cp /etc/ssl/certs/ca-certificates.crt .
         '''
       }
@@ -85,14 +80,14 @@ podTemplate(yaml: '''
       stage('Build Application AMD64') {
         withEnv(['CGO_ENABLED=0', 'GOOS=linux', 'GOARCH=amd64', "PACKAGE_CONTAINER_APPLICATION=${properties.PACKAGE_CONTAINER_APPLICATION}"]) {
           sh '''
-            go build -ldflags="-w -s" -o $PACKAGE_CONTAINER_APPLICATION-amd64 .
+            go build -buildvcs=false -ldflags="-w -s" -o $PACKAGE_CONTAINER_APPLICATION-amd64 .
           '''
         }
       }
       stage('Build Application ARM64') {
         withEnv(['CGO_ENABLED=0', 'GOOS=linux', 'GOARCH=arm64', "PACKAGE_CONTAINER_APPLICATION=${properties.PACKAGE_CONTAINER_APPLICATION}"]) {
           sh '''
-            go build -ldflags="-w -s" -o $PACKAGE_CONTAINER_APPLICATION-arm64 .
+            go build -buildvcs=false -ldflags="-w -s" -o $PACKAGE_CONTAINER_APPLICATION-arm64 .
           '''
         }
       }
