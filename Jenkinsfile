@@ -66,7 +66,7 @@ podTemplate(yaml: '''
     container('golang') {
       stage('Get CA Certs') {
         sh '''
-          apk --update add --no-check-certificate ca-certificates git
+          apk --update add ca-certificates
           cp /etc/ssl/certs/ca-certificates.crt .
         '''
       }
@@ -80,14 +80,14 @@ podTemplate(yaml: '''
       stage('Build Application AMD64') {
         withEnv(['CGO_ENABLED=0', 'GOOS=linux', 'GOARCH=amd64', "PACKAGE_CONTAINER_APPLICATION=${properties.PACKAGE_CONTAINER_APPLICATION}"]) {
           sh '''
-            go build -buildvcs=false -ldflags="-w -s" -o $PACKAGE_CONTAINER_APPLICATION-amd64 .
+            go build -ldflags="-w -s" -o $PACKAGE_CONTAINER_APPLICATION-amd64 .
           '''
         }
       }
       stage('Build Application ARM64') {
         withEnv(['CGO_ENABLED=0', 'GOOS=linux', 'GOARCH=arm64', "PACKAGE_CONTAINER_APPLICATION=${properties.PACKAGE_CONTAINER_APPLICATION}"]) {
           sh '''
-            go build -buildvcs=false -ldflags="-w -s" -o $PACKAGE_CONTAINER_APPLICATION-arm64 .
+            go build -ldflags="-w -s" -o $PACKAGE_CONTAINER_APPLICATION-arm64 .
           '''
         }
       }

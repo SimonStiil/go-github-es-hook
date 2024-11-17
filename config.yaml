@@ -1,4 +1,0 @@
-elastic:
-  addresses: 
-    - "https://elastic.tpi.stiil.dk:443"
-  username: svc-github-hook
