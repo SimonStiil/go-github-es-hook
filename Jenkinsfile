@@ -32,6 +32,17 @@ podTemplate(yaml: '''
         - sleep
         args: 
         - 99d
+        env:
+        - name: HOST_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: spec.nodeName
+        volumeMounts:
+        - name: "golang-cache"
+          mountPath: "/root/.cache/"
+        - name: "golang-prgs"
+          mountPath: "/go/pkg/"
       restartPolicy: Never
       volumes:
       - name: kaniko-secret
@@ -40,6 +51,12 @@ podTemplate(yaml: '''
           items:
           - key: .dockerconfigjson
             path: config.json
+      - name: "golang-cache"
+        persistentVolumeClaim:
+          claimName: "golang-cache"
+      - name: "golang-prgs"
+        persistentVolumeClaim:
+          claimName: "golang-prgs"
 ''') {
   node(POD_LABEL) {
     TreeMap scmData
@@ -54,15 +71,16 @@ podTemplate(yaml: '''
     }
     container('golang') {
       stage('Get CA Certs') {
+        currentBuild.description = sh(returnStdout: true, script: 'echo $HOST_NAME').trim()
         sh '''
-          apk --update add ca-certificates 
+          apk --update add ca-certificates
           cp /etc/ssl/certs/ca-certificates.crt .
         '''
       }
       stage('UnitTests') {
         withEnv(['CGO_ENABLED=0']) {
           sh '''
-            go test .
+            go test . -v
           '''
         }
       }
@@ -116,7 +134,6 @@ podTemplate(yaml: '''
       }
       container('manifest-tool') {
         stage('Build combined manifest') {
-          sh 'echo $HOME && pwd && whoami'
           withEnv(["GIT_COMMIT=${scmData.GIT_COMMIT}", "PACKAGE_NAME=${properties.PACKAGE_NAME}", "PACKAGE_DESTINATION=${properties.PACKAGE_DESTINATION}", "PACKAGE_CONTAINER_SOURCE=${properties.PACKAGE_CONTAINER_SOURCE}", "GIT_BRANCH=${BRANCH_NAME}"]) {
             if (isMainBranch()){
               sh 'manifest-tool push from-args --platforms linux/amd64,linux/arm64 --template $PACKAGE_DESTINATION/$PACKAGE_NAME:$BRANCH_NAME-ARCH --tags latest --target $PACKAGE_DESTINATION/$PACKAGE_NAME:$BRANCH_NAME'
@@ -125,6 +142,17 @@ podTemplate(yaml: '''
             }
           }
         }
+      }
+    }
+    if (env.CHANGE_ID) {
+      if (pullRequest.createdBy.equals("apps/renovate")){
+        if (pullRequest.mergeable) {
+          stage('Approve and Merge PR') {
+            pullRequest.merge(commitTitle: pullRequest.title, commitMessage: pullRequest.body, mergeMethod: 'squash')
+          }
+        }
+      } else {
+        echo "'PR Created by \""+ pullRequest.createdBy + "\""
       }
     }
   }
