@@ -12,7 +12,7 @@
     {
       "groupName": "all dependencies",
       "groupSlug": "all",
-      "matchPackagePatterns": [
+      "matchPackageNames": [
         "*"
       ]
     }
@@ -21,8 +21,12 @@
   "customManagers": [
     {
       "customType": "regex",
-      "fileMatch": ["(^|/)Jenkinsfile$"],
-      "matchStrings": ["\\simage: (?<depName>.*?):(?<currentValue>.*?)\\s"],
+      "fileMatch": [
+        "(^|/)Jenkinsfile$"
+      ],
+      "matchStrings": [
+        "\\simage: (?<depName>.*?):(?<currentValue>.*?)\\s"
+      ],
       "datasourceTemplate": "docker",
       "versioningTemplate": "docker"
     }

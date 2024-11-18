@@ -145,7 +145,7 @@ podTemplate(yaml: '''
       }
     }
     if (env.CHANGE_ID) {
-      if (pullRequest.createdBy.equals("apps/renovate")){
+      if (pullRequest.createdBy.equals("renovate[bot]")){
         if (pullRequest.mergeable) {
           stage('Approve and Merge PR') {
             pullRequest.merge(commitTitle: pullRequest.title, commitMessage: pullRequest.body, mergeMethod: 'squash')
