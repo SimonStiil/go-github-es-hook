@@ -32,6 +32,12 @@ podTemplate(yaml: '''
         - sleep
         args: 
         - 99d
+        env:
+        - name: HOST_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: spec.nodeName
         volumeMounts:
         - name: "golang-cache"
           mountPath: "/root/.cache/"
@@ -65,6 +71,7 @@ podTemplate(yaml: '''
     }
     container('golang') {
       stage('Get CA Certs') {
+        currentBuild.description = sh(returnStdout: true, script: 'echo $HOST_NAME').trim()
         sh '''
           apk --update add ca-certificates
           cp /etc/ssl/certs/ca-certificates.crt .
@@ -135,6 +142,17 @@ podTemplate(yaml: '''
             }
           }
         }
+      }
+    }
+    if (env.CHANGE_ID) {
+      if (pullRequest.createdBy.equals("apps/renovate")){
+        if (pullRequest.mergeable) {
+          stage('Approve and Merge PR') {
+            pullRequest.merge(commitTitle: pullRequest.title, commitMessage: pullRequest.body, mergeMethod: 'squash')
+          }
+        }
+      } else {
+        echo "'PR Created by \""+ pullRequest.createdBy + "\""
       }
     }
   }
